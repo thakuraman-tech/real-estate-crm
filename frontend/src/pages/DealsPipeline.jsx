@@ -1,22 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Clock, Flag } from 'lucide-react';
+import api from '../api';
 
-const initialData = {
-  stages: {
-    'stage-1': { id: 'stage-1', title: 'Lead In', dealIds: ['deal-1', 'deal-2'] },
-    'stage-2': { id: 'stage-2', title: 'Negotiation', dealIds: ['deal-3'] },
-    'stage-3': { id: 'stage-3', title: 'Agreement Sent', dealIds: ['deal-4'] },
-    'stage-4': { id: 'stage-4', title: 'Closed Won', dealIds: [] }
-  },
-  deals: {
-    'deal-1': { id: 'deal-1', title: 'Palm Jumeirah Villa', client: 'Priya Patel', value: '$4.5M', priority: 'High', daysAgo: 2, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80' },
-    'deal-2': { id: 'deal-2', title: 'Downtown Penthouse', client: 'Rohit Kumar', value: '$2.1M', priority: 'Medium', daysAgo: 5, avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&q=80' },
-    'deal-3': { id: 'deal-3', title: 'Suburb Home', client: 'Anil Gupta', value: '$650K', priority: 'Low', daysAgo: 1, avatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=100&q=80' },
-    'deal-4': { id: 'deal-4', title: 'Office Space', client: 'Infosys', value: '$1.2M', priority: 'High', daysAgo: 8, avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&q=80' },
-  },
-  stageOrder: ['stage-1', 'stage-2', 'stage-3', 'stage-4']
+const defaultStages = {
+  'Negotiation': { id: 'Negotiation', title: 'Negotiation', dealIds: [] },
+  'Agreement': { id: 'Agreement', title: 'Agreement Sent', dealIds: [] },
+  'Closed': { id: 'Closed', title: 'Closed Won', dealIds: [] },
+  'Lost': { id: 'Lost', title: 'Closed Lost', dealIds: [] },
 };
+
+const stageOrder = ['Negotiation', 'Agreement', 'Closed', 'Lost'];
 
 const PriorityFlag = ({ priority }) => {
   const colors = {
@@ -28,9 +22,47 @@ const PriorityFlag = ({ priority }) => {
 };
 
 export default function DealsPipeline() {
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState({ stages: defaultStages, deals: {}, stageOrder });
 
-  const onDragEnd = (result) => {
+  useEffect(() => {
+    fetchDeals();
+  }, []);
+
+  const fetchDeals = async () => {
+    try {
+      const { data: fetchedDeals } = await api.get('/deals');
+      
+      const newStages = JSON.parse(JSON.stringify(defaultStages));
+      const newDeals = {};
+
+      fetchedDeals.forEach(deal => {
+        const id = deal._id || deal.id;
+        newDeals[id] = {
+          id: id,
+          title: deal.title,
+          client: deal.leadId?.name || 'Unknown Client',
+          value: `$${(deal.amount || 0).toLocaleString()}`,
+          priority: deal.amount > 1000000 ? 'High' : (deal.amount > 500000 ? 'Medium' : 'Low'),
+          daysAgo: Math.floor((new Date() - new Date(deal.createdAt)) / (1000 * 60 * 60 * 24)) || 0,
+          avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80'
+        };
+        const stage = deal.stage || 'Negotiation';
+        if (newStages[stage]) {
+          newStages[stage].dealIds.push(id);
+        }
+      });
+
+      setData({
+        stages: newStages,
+        deals: newDeals,
+        stageOrder
+      });
+    } catch (err) {
+      console.error('Failed to fetch deals:', err);
+    }
+  };
+
+  const onDragEnd = async (result) => {
     const { destination, source, draggableId } = result;
     if (!destination) return;
     if (destination.droppableId === source.droppableId && destination.index === source.index) return;
@@ -57,6 +89,15 @@ export default function DealsPipeline() {
     const newFinish = { ...finishStage, dealIds: finishDealIds };
 
     setData({ ...data, stages: { ...data.stages, [newStart.id]: newStart, [newFinish.id]: newFinish } });
+
+    // Update backend asynchronously
+    try {
+      await api.put(`/deals/${draggableId}`, { stage: destination.droppableId });
+    } catch (err) {
+      console.error('Failed to update deal stage:', err);
+      // Revert if needed
+      fetchDeals();
+    }
   };
 
   return (

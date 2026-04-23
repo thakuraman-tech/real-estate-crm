@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { TrendingUp, Users, DollarSign, Home } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import api from '../api';
 
 const revenueData = [
   { name: 'Jan', value: 4000 },
@@ -38,6 +39,55 @@ const StatCard = ({ title, value, trend, icon: Icon, color }) => (
 );
 
 export default function DashboardPage() {
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    activeLeads: 0,
+    propertiesSold: 0,
+    conversionRate: 0,
+    recentActivity: recentActivity // Keep mock for now unless we build an activity endpoint
+  });
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const [leadsRes, propsRes, dealsRes] = await Promise.all([
+          api.get('/leads'),
+          api.get('/properties'),
+          api.get('/deals')
+        ]);
+
+        const leads = leadsRes.data;
+        const properties = propsRes.data;
+        const deals = dealsRes.data;
+
+        const activeLeads = leads.filter(l => l.status !== 'Converted' && l.status !== 'Lost').length;
+        const propertiesSold = properties.filter(p => p.status === 'Sold').length;
+        const closedDeals = deals.filter(d => d.stage === 'Closed');
+        const totalRevenue = closedDeals.reduce((sum, d) => sum + (d.amount || 0), 0);
+        
+        const conversionRate = leads.length > 0 ? ((closedDeals.length / leads.length) * 100).toFixed(1) : 0;
+
+        setStats(prev => ({
+          ...prev,
+          activeLeads,
+          propertiesSold,
+          totalRevenue,
+          conversionRate
+        }));
+      } catch (err) {
+        console.error('Failed to fetch dashboard stats', err);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  const formatCurrency = (val) => {
+    if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+    if (val >= 1000) return `$${(val / 1000).toFixed(1)}K`;
+    return `$${val}`;
+  };
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between mb-8">
@@ -48,10 +98,10 @@ export default function DashboardPage() {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard title="Total Revenue" value="$2.4M" trend={12.5} icon={DollarSign} color="bg-gradient-to-br from-brand-400 to-brand-600 shadow-brand-500/20" />
-        <StatCard title="Active Leads" value="1,248" trend={8.2} icon={Users} color="bg-gradient-to-br from-purple-400 to-purple-600 shadow-purple-500/20" />
-        <StatCard title="Properties Sold" value="42" trend={-2.4} icon={Home} color="bg-gradient-to-br from-orange-400 to-orange-600 shadow-orange-500/20" />
-        <StatCard title="Conversion Rate" value="18.2%" trend={4.1} icon={TrendingUp} color="bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-emerald-500/20" />
+        <StatCard title="Total Revenue" value={formatCurrency(stats.totalRevenue)} trend={12.5} icon={DollarSign} color="bg-gradient-to-br from-brand-400 to-brand-600 shadow-brand-500/20" />
+        <StatCard title="Active Leads" value={stats.activeLeads.toLocaleString()} trend={8.2} icon={Users} color="bg-gradient-to-br from-purple-400 to-purple-600 shadow-purple-500/20" />
+        <StatCard title="Properties Sold" value={stats.propertiesSold.toLocaleString()} trend={-2.4} icon={Home} color="bg-gradient-to-br from-orange-400 to-orange-600 shadow-orange-500/20" />
+        <StatCard title="Conversion Rate" value={`${stats.conversionRate}%`} trend={4.1} icon={TrendingUp} color="bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-emerald-500/20" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

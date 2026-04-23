@@ -1,11 +1,14 @@
-import React from 'react';
-import { HashRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, KanbanSquare, Building2, Settings } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { LayoutDashboard, Users, KanbanSquare, Building2, Settings, LogOut } from 'lucide-react';
 import DashboardPage from './pages/Dashboard';
 import LeadsPage from './pages/Leads';
 import DealsPipeline from './pages/DealsPipeline';
 import PropertiesPage from './pages/Properties';
 import SettingsPage from './pages/Settings';
+import LoginPage from './pages/Login';
+import RegisterPage from './pages/Register';
+import api from './api';
 
 const SidebarItem = ({ icon: Icon, label, to }) => {
   const location = useLocation();
@@ -43,13 +46,18 @@ const Sidebar = () => (
   </div>
 );
 
-const AppLayout = ({ children }) => (
+const AppLayout = ({ children, user, handleLogout }) => (
   <div className="flex min-h-screen bg-gray-50/50 font-outfit">
     <Sidebar />
     <main className="flex-1 ml-64 flex flex-col h-screen overflow-hidden">
       <header className="h-16 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center px-8 justify-between z-10 sticky top-0">
-        <h2 className="font-semibold text-gray-800 text-lg">Welcome back, <span className="text-brand-600 font-bold">Rahul!</span> 👋</h2>
-        <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80" alt="RS" className="w-9 h-9 rounded-full object-cover border-2 border-white shadow-sm" />
+        <h2 className="font-semibold text-gray-800 text-lg">Welcome back, <span className="text-brand-600 font-bold">{user?.name || 'Agent'}!</span> 👋</h2>
+        <div className="flex items-center gap-4">
+          <button onClick={handleLogout} className="text-gray-500 hover:text-red-500 transition-colors flex items-center gap-2 text-sm font-medium">
+            <LogOut size={16} /> Logout
+          </button>
+          <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80" alt="RS" className="w-9 h-9 rounded-full object-cover border-2 border-white shadow-sm" />
+        </div>
       </header>
       <div className="p-8 flex-1 overflow-y-auto">
         {children}
@@ -59,15 +67,51 @@ const AppLayout = ({ children }) => (
 );
 
 function App() {
+  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')) || null);
+
+  useEffect(() => {
+    if (token) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      delete api.defaults.headers.common['Authorization'];
+    }
+  }, [token]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setToken(null);
+    setUser(null);
+  };
+
+  const setTokenAndUser = (newToken) => {
+    setToken(newToken);
+    setUser(JSON.parse(localStorage.getItem('user')));
+  };
+
+  if (!token) {
+    return (
+      <Router>
+        <Routes>
+          <Route path="/login" element={<LoginPage setToken={setTokenAndUser} />} />
+          <Route path="/register" element={<RegisterPage setToken={setTokenAndUser} />} />
+          <Route path="*" element={<Navigate to="/login" />} />
+        </Routes>
+      </Router>
+    );
+  }
+
   return (
     <Router>
-      <AppLayout>
+      <AppLayout user={user} handleLogout={handleLogout}>
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/leads" element={<LeadsPage />} />
           <Route path="/properties" element={<PropertiesPage />} />
           <Route path="/deals" element={<DealsPipeline />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </AppLayout>
     </Router>

@@ -1,14 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, MoreVertical, Hash, Mail, Phone, ExternalLink, X } from 'lucide-react';
+import api from '../api';
 
-const mockLeads = [
-  { id: 1, name: 'Priya Patel', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80', email: 'priya@example.com', phone: '+91 98765 43210', status: 'New', priority: 'High', source: 'Website', budget: '$500K' },
-  { id: 2, name: 'Rohit Kumar', avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&q=80', email: 'rohit@techco.in', phone: '+91 91234 56789', status: 'Contacted', priority: 'Medium', source: 'Referral', budget: '$1.2M' },
-  { id: 3, name: 'Anil Gupta', avatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=100&q=80', email: 'anil@guptacorp.com', phone: '+91 98888 77777', status: 'Qualified', priority: 'High', source: 'Ads', budget: '$800K' },
-  { id: 4, name: 'Kavita Verma', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=100&q=80', email: 'kavi@verma.com', phone: '+91 99999 11111', status: 'Converted', priority: 'Low', source: 'Direct', budget: '$2.5M' },
-  { id: 5, name: 'Vinay Reddy', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80', email: 'vinay@reddyrealty.in', phone: '+91 88888 22222', status: 'New', priority: 'Medium', source: 'Website', budget: '$3.1M' },
-];
-
+// Removed mockLeads
 const StatusBadge = ({ status }) => {
   const styles = {
     'New': 'bg-blue-100 text-blue-700 border-blue-200',
@@ -37,8 +31,22 @@ const PriorityBadge = ({ priority }) => {
   );
 };
 
-const AddLeadModal = ({ isOpen, onClose }) => {
+const AddLeadModal = ({ isOpen, onClose, onLeadAdded }) => {
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '', budget: '' });
+
   if (!isOpen) return null;
+
+  const handleSave = async () => {
+    try {
+      await api.post('/leads', { ...formData, source: 'Website', status: 'New' });
+      onLeadAdded();
+      onClose();
+      setFormData({ name: '', email: '', phone: '', budget: '' });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add lead');
+    }
+  };
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200">
@@ -52,27 +60,27 @@ const AddLeadModal = ({ isOpen, onClose }) => {
         <div className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-            <input type="text" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400" placeholder="e.g. Ramesh Kumar" />
+            <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400" placeholder="e.g. Ramesh Kumar" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-              <input type="email" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400" placeholder="ramesh@example.com" />
+              <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400" placeholder="ramesh@example.com" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-              <input type="tel" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400" placeholder="+91..." />
+              <input type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400" placeholder="+91..." />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Budget</label>
-            <input type="text" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400" placeholder="e.g. $500K or 4 Cr" />
+            <input type="text" value={formData.budget} onChange={(e) => setFormData({...formData, budget: e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400" placeholder="e.g. $500K or 4 Cr" />
           </div>
           <div className="pt-4 flex justify-end gap-3 mt-4">
             <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">
               Cancel
             </button>
-            <button onClick={onClose} className="px-4 py-2 bg-gradient-to-r from-brand-500 to-brand-600 text-white text-sm font-medium rounded-lg shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5">
+            <button onClick={handleSave} className="px-4 py-2 bg-gradient-to-r from-brand-500 to-brand-600 text-white text-sm font-medium rounded-lg shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5">
               Save Lead
             </button>
           </div>
@@ -85,15 +93,29 @@ const AddLeadModal = ({ isOpen, onClose }) => {
 export default function LeadsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [leads, setLeads] = useState([]);
 
-  const filteredLeads = mockLeads.filter(lead => 
-    lead.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    lead.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const fetchLeads = async () => {
+    try {
+      const { data } = await api.get('/leads');
+      setLeads(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeads();
+  }, []);
+
+  const filteredLeads = leads.filter(lead => 
+    (lead.name && lead.name.toLowerCase().includes(searchTerm.toLowerCase())) || 
+    (lead.email && lead.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
     <>
-      <AddLeadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <AddLeadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onLeadAdded={fetchLeads} />
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 h-[calc(100vh-8rem)] flex flex-col">
          <div className="flex items-center justify-between mb-6">
           <div>
@@ -137,13 +159,13 @@ export default function LeadsPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filteredLeads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-brand-50/30 transition-colors group text-sm cursor-pointer">
+                  <tr key={lead._id || lead.id} className="hover:bg-brand-50/30 transition-colors group text-sm cursor-pointer">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <img src={lead.avatar} alt={lead.name} className="w-10 h-10 rounded-full object-cover shadow-sm group-hover:ring-2 ring-brand-500/30 transition-all" />
+                        <img src={lead.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80'} alt={lead.name} className="w-10 h-10 rounded-full object-cover shadow-sm group-hover:ring-2 ring-brand-500/30 transition-all" />
                         <div>
                           <p className="font-bold text-gray-900 group-hover:text-brand-600 transition-colors">{lead.name}</p>
-                          <p className="text-gray-500 text-xs mt-0.5 font-medium">{lead.budget} Budget</p>
+                          <p className="text-gray-500 text-xs mt-0.5 font-medium">{lead.budget || '$0'} Budget</p>
                         </div>
                       </div>
                     </td>
