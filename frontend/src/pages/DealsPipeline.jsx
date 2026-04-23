@@ -30,7 +30,8 @@ export default function DealsPipeline() {
 
   const fetchDeals = async () => {
     try {
-      const { data: fetchedDeals } = await api.get('/deals');
+      const response = await api.get('/deals');
+      const fetchedDeals = response.data.data;
       
       const newStages = JSON.parse(JSON.stringify(defaultStages));
       const newDeals = {};

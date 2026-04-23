@@ -153,8 +153,8 @@ export default function PropertiesPage() {
 
   const fetchProperties = async () => {
     try {
-      const { data } = await api.get('/properties');
-      setProperties(data);
+      const response = await api.get('/properties');
+      setProperties(response.data.data);
     } catch (err) {
       console.error(err);
     }

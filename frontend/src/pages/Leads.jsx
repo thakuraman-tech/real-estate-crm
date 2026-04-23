@@ -97,8 +97,8 @@ export default function LeadsPage() {
 
   const fetchLeads = async () => {
     try {
-      const { data } = await api.get('/leads');
-      setLeads(data);
+      const response = await api.get('/leads');
+      setLeads(response.data.data);
     } catch (err) {
       console.error(err);
     }

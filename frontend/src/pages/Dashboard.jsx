@@ -56,9 +56,9 @@ export default function DashboardPage() {
           api.get('/deals')
         ]);
 
-        const leads = leadsRes.data;
-        const properties = propsRes.data;
-        const deals = dealsRes.data;
+        const leads = leadsRes.data.data;
+        const properties = propsRes.data.data;
+        const deals = dealsRes.data.data;
 
         const activeLeads = leads.filter(l => l.status !== 'Converted' && l.status !== 'Lost').length;
         const propertiesSold = properties.filter(p => p.status === 'Sold').length;
