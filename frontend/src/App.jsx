@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, KanbanSquare, Building2, Settings } from 'lucide-react';
 import DashboardPage from './pages/Dashboard';
 import LeadsPage from './pages/Leads';
